@@ -92,8 +92,7 @@ def get_cubanlous_prices():
         item["price"] = price
         items.append(item)
     
-    for item in items:
-        print(item["brand"] + "|" + item["name"] + "|" + item["quantity"] + "|" + item["price"])
+    return items
     
 def get_finestcc_prices():
     finestcc_price_page = services.get_finestcc()
@@ -117,5 +116,4 @@ def get_finestcc_prices():
                 item["quantity"] = option.select(".sticks")[0].text.strip()
                 items.append(item)
     
-    for item in items:
-        print(item["brand"] + "|" + item["name"] + "|" + item["quantity"] + "|" + item["price"])
+    return items
