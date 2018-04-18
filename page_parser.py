@@ -79,8 +79,9 @@ def get_cubanlous_prices():
             name = link[brand_end_idx+len(brand_end):]
             if (name.endswith("-cigars")):
                 name = name[:len(name)-7]
-            name = name.replace("-"+quantity, "").replace("-", " ")
-            name = name.replace(brand, "")
+            name = name.replace("-"+quantity, "").replace("-", " ").strip()
+            if name.startswith(brand):
+                name = name[len(brand):]
         except:
             continue
         
@@ -107,12 +108,14 @@ def get_finestcc_prices():
             continue
         
         for product in brand_section.select(".product_container"):
-            name = product.select(".product_title")[0].text
+            name = product.select(".product_title")[0].text.strip()
             
             for option in product.select(".product_price > div"):
                 item = {}
                 item["brand"] = brand
-                item["name"] = name.replace(brand, "").strip()
+                if name.startswith(brand):
+                    name = name[len(brand):]
+                item["name"] = name.strip()
                 item["price"] = option.select(".original,.special")[0].text.strip()[3:]
                 item["quantity"] = option.select(".sticks")[0].text.strip()
                 items.append(item)

@@ -6,6 +6,10 @@ import os
 
 def get_path_to_cache_file(service_name):
     folder = "App_Data"
+    
+    if (not os.path.exists(folder)):
+        os.makedirs(folder)
+
     return folder + "/" + time.strftime("%Y%m%d") + "_" + service_name + ".html"
 
 def get_coh(get_fresh = False):    
