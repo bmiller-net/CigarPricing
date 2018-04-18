@@ -2,15 +2,28 @@ from requests import get,post,Session
 from requests.exceptions import RequestException
 from contextlib import closing
 import time
+import os
 
-def get_coh():
+def get_path_to_cache_file(service_name):
+    folder = "App_Data"
+    return folder + "/" + time.strftime("%Y%m%d") + "_" + service_name + ".html"
+
+def get_coh(get_fresh = False):    
+    filename = get_path_to_cache_file("coh")
+    if (os.path.exists(filename) and not get_fresh):
+        file = open(filename, encoding="utf-8")
+        return file.read()
+        
     s = Session()
     s.get("https://www.cigarsofhabanos.com/")
     url = "https://www.cigarsofhabanos.com/search_product.aspx?pST=A&qsType=0&qsBrand=0&qsProduct=&qsPriceCat=0&qsPrice1=0&qsPrice2=0&qsLenCat=0&qsLen1=0&qsLen2=0&qsGuageCat=0&qsGuage1=0&qsGuage2=0"
     try:
         with closing(s.get(url, stream=True)) as resp:
             if is_good_response(resp):
-                return resp.content
+                content = resp.text
+                file = open(filename, "w", encoding="utf-8")
+                file.write(content)
+                return content
             else:
                 return None
 
@@ -18,7 +31,12 @@ def get_coh():
         log_error('Error during requests to {0} : {1}'.format(url, str(e)))
         return None
 
-def get_ihav():
+def get_ihav(get_fresh = False):
+    filename = get_path_to_cache_file("ihav")
+    if (os.path.exists(filename) and not get_fresh):
+        file = open(filename, encoding="utf-8")
+        return file.read()
+        
     s = Session()
     s.get("https://www.ihavanas.com/")
     url = "https://www.ihavanas.com/advancesearch.php"
@@ -27,7 +45,10 @@ def get_ihav():
     try:
         with closing(s.post(url, data=body, headers=headers, stream=True)) as resp:
             if is_good_response(resp):
-                return resp.content.replace(b'54%"<', b'54%"><')
+                file = open(filename, "w", encoding="utf-8")
+                content = resp.text.replace('54%"<', '54%"><')
+                file.write(content)
+                return content
             else:
                 return None
 
@@ -35,7 +56,12 @@ def get_ihav():
         log_error('Error during requests to {0} : {1}'.format(url, str(e)))
         return None
     
-def get_cubanlous():
+def get_cubanlous(get_fresh = False):
+    filename = get_path_to_cache_file("cubanlous")
+    if (os.path.exists(filename) and not get_fresh):
+        file = open(filename, encoding="utf-8")
+        return file.read()
+        
     s = Session()
     s.get("https://www.cubanlous.com/")
     timestamp = round(time.time() * 1000)
@@ -44,7 +70,10 @@ def get_cubanlous():
     try:
         with closing(s.get(url, headers=headers, stream=True)) as resp:
             if is_good_response(resp):
-                return resp.content
+                content = resp.text
+                file = open(filename, "w", encoding="utf-8")
+                file.write(content)
+                return content
             else:
                 return None
 
@@ -52,7 +81,12 @@ def get_cubanlous():
         log_error('Error during requests to {0} : {1}'.format(url, str(e)))
         return None
     
-def get_finestcc():
+def get_finestcc(get_fresh = False):
+    filename = get_path_to_cache_file("finestcc")
+    if (os.path.exists(filename) and not get_fresh):
+        file = open(filename, encoding="utf-8")
+        return file.read()
+    
     s = Session()
     s.get("https://www.finestcubancigars.com/")
     timestamp = round(time.time() * 1000)
@@ -61,7 +95,10 @@ def get_finestcc():
     try:
         with closing(s.get(url, headers=headers, stream=True)) as resp:
             if is_good_response(resp):
-                return resp.content
+                content = resp.text
+                file = open(filename, "w", encoding="utf-8")
+                file.write(content)
+                return content
             else:
                 return None
 

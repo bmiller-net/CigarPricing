@@ -10,11 +10,9 @@ def get_coh_prices():
     for row in coh_parsed.select("tr[id^='grid_DX']"):
         if (row.get("id") == None or row.text == None):
             continue
-        print(row.get("id"))
         if (row.get("id").startswith("grid_DXGroup")):
             if (row.select("td")[1].text.startswith("Brand:")):
                 brand = row.select("td")[1].text[7:]
-                print(brand)
         if (row.get("id").startswith("grid_DXData")):
             item = {}
             cells = row.select("td")
@@ -42,7 +40,7 @@ def get_ihav_prices():
         quantity = cell_parts[2].strip()
         
         price_text = cells[2].text.strip()
-        price = price_text[3:]
+        price = price_text[2:]
         
         item = {}
         item["brand"] = brand
@@ -78,7 +76,10 @@ def get_cubanlous_prices():
         try:
             brand_end_idx = link.index(brand_end)
             brand = link[brand_begin_idx:brand_end_idx].replace("-", " ")
-            name = link[brand_end_idx+len(brand_end):].replace("-"+quantity, "").replace("-", " ")
+            name = link[brand_end_idx+len(brand_end):]
+            if (name.endswith("-cigars")):
+                name = name[:len(name)-7]
+            name = name.replace("-"+quantity, "").replace("-", " ")
             name = name.replace(brand, "")
         except:
             continue
