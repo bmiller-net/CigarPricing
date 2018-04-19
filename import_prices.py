@@ -4,6 +4,7 @@ import time
 import re
 import configparser
 import os
+import unidecode
 
 def run():
     book = xlwt.Workbook()
@@ -27,83 +28,27 @@ def get_prices(workbook, retrieve_function, source_name):
         sheet.write(idx, 3, price["price"])
 
 def get_unique():
-    ihav = page_parser.get_ihav_prices()
-    coh = page_parser.get_coh_prices()
-    cl = page_parser.get_cubanlous_prices()
-    fcc = page_parser.get_finestcc_prices()
-    
+    site_prices = page_parser.get_prices()
+
     inventory = []
-    # inventory = return_unique_inventory(ihav, inventory)
-        
-    # inventory = return_unique_inventory(coh, inventory)
-        
-    # inventory = return_unique_inventory(cl, inventory)
-        
-    # inventory = return_unique_inventory(fcc, inventory)
     
     joined_items = {}
-    
-    for item in ihav:
-        display_tuple = get_display_tuple(item["brand"], item["name"], item["quantity"])
-        key = ()
-        uniform_item = get_uniform_item_tuple(display_tuple[0], display_tuple[1], display_tuple[2])
-        for inv in inventory:
-            if (get_uniform_item_tuple(inv[0], inv[1], inv[2]) == uniform_item):
-                key = inv
-                break
-        if (key == () or uniform_item not in joined_items):
-            inventory.append(uniform_item)
-            joined_items[uniform_item] = { "brand": display_tuple[0], "name": display_tuple[1], "quantity": display_tuple[2] }
-        joined_items[uniform_item]["ihav"] = item["price"]
         
-    for item in coh:
-        display_tuple = get_display_tuple(item["brand"], item["name"], item["quantity"])
-        key = ()
-        uniform_item = get_uniform_item_tuple(display_tuple[0], display_tuple[1], display_tuple[2])
-        for inv in inventory:
-            if (get_uniform_item_tuple(inv[0], inv[1], inv[2]) == uniform_item):
-                key = inv
-                break
-        if (key == () or uniform_item not in joined_items):
-            inventory.append(uniform_item)
-            joined_items[uniform_item] = { "brand": display_tuple[0], "name": display_tuple[1], "quantity": display_tuple[2] }
-        joined_items[uniform_item]["coh"] = item["price"]
-        
-    for item in cl:
-        display_tuple = get_display_tuple(item["brand"], item["name"], item["quantity"])
-        key = ()
-        uniform_item = get_uniform_item_tuple(display_tuple[0], display_tuple[1], display_tuple[2])
-        for inv in inventory:
-            if (get_uniform_item_tuple(inv[0], inv[1], inv[2]) == uniform_item):
-                key = inv
-                break
-        if (key == () or uniform_item not in joined_items):
-            inventory.append(uniform_item)
-            joined_items[uniform_item] = { "brand": display_tuple[0], "name": display_tuple[1], "quantity": display_tuple[2] }
-        joined_items[uniform_item]["cl"] = item["price"]
-        
-    for item in fcc:
-        display_tuple = get_display_tuple(item["brand"], item["name"], item["quantity"])
-        key = ()
-        uniform_item = get_uniform_item_tuple(display_tuple[0], display_tuple[1], display_tuple[2])
-        for inv in inventory:
-            if (get_uniform_item_tuple(inv[0], inv[1], inv[2]) == uniform_item):
-                key = inv
-                break
-        if (key == () or uniform_item not in joined_items):
-            inventory.append(uniform_item)
-            joined_items[uniform_item] = { "brand": display_tuple[0], "name": display_tuple[1], "quantity": display_tuple[2] }
-        joined_items[uniform_item]["fcc"] = item["price"]
-    
     book = xlwt.Workbook()
     uitems = book.add_sheet("Inventory")
     uitems.write(0, 0, "Brand")
     uitems.write(0, 1, "Name")
     uitems.write(0, 2, "Quantity")
-    uitems.write(0, 3, "iHav")
-    uitems.write(0, 4, "CoH")
-    uitems.write(0, 5, "CubanLous")
-    uitems.write(0, 6, "FinestCC")
+    
+    col = 3
+    for source,prices in site_prices.items():
+        items = process_site_items(prices, inventory, joined_items, source)
+        print(source)
+        inventory = items["inventory"]
+        joined_items = items["joined_items"]
+        uitems.write(0, col, source)
+        col += 1
+        
     idx = 1
     
     brands_to_include = get_brands_to_include()
@@ -121,17 +66,15 @@ def get_unique():
         uitems.write(idx, 1, name)
         uitems.write(idx, 2, quantity)
         
-        if ("ihav" in uitem):
-            uitems.write(idx, 3, uitem["ihav"].strip())
+        if (brand == "Montecristo" and name == "Edmundo"):
+            print(key)
+            print(uitem)
         
-        if ("coh" in uitem):
-            uitems.write(idx, 4, uitem["coh"].strip())
-        
-        if ("cl" in uitem):
-            uitems.write(idx, 5, uitem["cl"].strip())
-        
-        if ("fcc" in uitem):
-            uitems.write(idx, 6, uitem["fcc"].strip())
+        col = 3
+        for source in list(site_prices.keys()):
+            if source in uitem.keys():
+                uitems.write(idx, col, uitem[source].strip())
+            col += 1
         
         idx+=1
     filename = "App_Data/" + time.strftime("%Y%m%d-%H%M") + "_prices.xls"
@@ -154,12 +97,11 @@ def return_unique_inventory(items, inventory = []):
         inventory.append((item["brand"], item["name"], item["quantity"]))
     
     return inventory
-
-def fix_brand(input_string):
-    return input_string.replace("H.Upmann", "H. Upmann").replace("Hupmann", "H. Upmann").replace("Hoyo De Monterrey", "Hoyo de Monterrey").replace("Jose L. Piedra", "Jose Piedra").replace("Quai Orsay", "Quai DOrsay").replace("Romeo Y Julieta", "Romeo y Julieta").replace("San Cristobal De La Habana", "San Cristobal")
-
+    
 def get_display_tuple(brand, name, quantity):
     brand = fix_brand(brand)
+    quantity = fix_quantity(quantity)
+    name = fix_name(name)
     
     if brand.lower() == 'cohiba':
         name = name.replace("Robustos ", "Robusto ")
@@ -197,23 +139,33 @@ def get_display_tuple(brand, name, quantity):
     
     name = re.sub('No(?P<number>[0-9]+)', 'No.\g<number>', name)
     
-    name = format_for_display(name)
-    
+    name = fix_name(name)
     
     return (brand, name, quantity)
+
+def fix_brand(input_string):
+    return strip_special(unidecode.unidecode(input_string)).replace("H.Upmann", "H. Upmann").replace("Hupmann", "H. Upmann").replace("Hoyo De Monterrey", "Hoyo de Monterrey").replace("Jose L. Piedra", "Jose Piedra").replace("Quai Orsay", "Quai DOrsay").replace("Romeo Y Julieta", "Romeo y Julieta").replace("San Cristobal De La Habana", "San Cristobal").strip()
+
+def fix_name(input_string):
+    output_string = re.sub('[A][\/][T]', 'Tubos', unidecode.unidecode(input_string), flags=re.IGNORECASE)
+    output_string = re.sub('[.][ ]', '.', output_string)
+    return output_string.strip()
     
+def fix_quantity(input_string):
+    return re.sub('((Box)?)((Set)?)((Humidor)?)([\(]?Cabinet[\)]?)?((Pack)?)((Cube)?)((Jar)?)([ ]of[ ])?', '', input_string, flags=re.IGNORECASE).strip()
+
+def fix_price(input_string):
+    return re.sub('([$,`\']?)', '', input_string).strip()
+
 def get_uniform_item_tuple(brand, name, quantity):
-    brand_stripped = strip_special(fix_brand(brand)).lower()
-    name_stripped = strip_special(name.replace("A/T", "Tubos")).lower()
-    quantity_stripped = strip_special(quantity).replace("Box", "").replace("(Cabinet)", "").strip().lower()
+    brand_stripped = fix_brand(brand).lower()
+    name_stripped = fix_name(name).lower()
+    quantity_stripped = fix_quantity(quantity).lower()
     
     return (brand_stripped, name_stripped, quantity_stripped)
     
 def strip_special(input_string):
     return re.sub('[-/\\\. ]', '', input_string).strip()
-    
-def format_for_display(input_string):
-    return input_string.replace(". ", ".").replace("A/T", "Tubos")
     
 def get_brands_to_include():
     settings_file = 'settings.ini'
@@ -230,3 +182,18 @@ def get_brands_to_include():
         return
     brands_to_include = config[root_node][brands_key]
     return list(map(lambda brand: brand.strip(), brands_to_include.split(',')))
+    
+def process_site_items(items, inventory, joined_items, source):
+    for item in items:
+        display_tuple = get_display_tuple(item["brand"], item["name"], item["quantity"])
+        key = ()
+        uniform_item = get_uniform_item_tuple(display_tuple[0], display_tuple[1], display_tuple[2])
+        for inv in inventory:
+            if (get_uniform_item_tuple(inv[0], inv[1], inv[2]) == uniform_item):
+                key = inv
+                break
+        if (key == () or uniform_item not in joined_items):
+            inventory.append(uniform_item)
+            joined_items[uniform_item] = { "brand": display_tuple[0], "name": display_tuple[1], "quantity": display_tuple[2] }
+        joined_items[uniform_item][source] = fix_price(item["price"])
+    return { "inventory": inventory, "joined_items": joined_items }

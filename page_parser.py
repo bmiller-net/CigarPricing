@@ -119,5 +119,75 @@ def get_finestcc_prices():
                 item["price"] = option.select(".original,.special")[0].text.strip()[3:]
                 item["quantity"] = option.select(".sticks")[0].text.strip()
                 items.append(item)
+                
+    return items
+    
+def get_cigarone_prices():
+    cigarone_price_page = services.get_cigarone()
+    cigarone_parsed = BeautifulSoup(cigarone_price_page, "html.parser")
+    brand = ""
+    items = []
+    for brand_section in cigarone_parsed.select("section.section"):
+        try:
+            brand = brand_section.select("h1.banner-caption")[0].text.strip()
+        except:
+            continue
+        
+        for product in brand_section.select(".product-table"):
+            columns = product.select(".column")
+            
+            name = columns[0].text.strip()
+            
+            quantity = columns[1].text.strip()
+            
+            price_column = columns[2]
+            price = ""
+            special_price = price_column.select(".price-discounted")
+            if (len(special_price) > 0):
+                price = special_price[0].text.strip()
+            else:
+                price = price_column.text.strip()
+            
+            item = {}
+            item["brand"] = brand
+            item["name"] = name
+            item["price"] = price[2:]
+            item["quantity"] = quantity
+            
+            # print(item["brand"]+"|"+item["name"]+"|"+item["price"]+"|"+item["quantity"])
+            
+            items.append(item)
+                
     
     return items
+    
+def get_topcubans_prices():
+    topcubans_price_page = services.get_topcubans()
+    topcubans_parsed = BeautifulSoup(topcubans_price_page, "html.parser")
+    brand = ""
+    items = []
+    for product in topcubans_parsed.select("section.product-grid div.column"):
+        brand = product.select("div.brand-name")[0].text.strip()
+        name = product.select("div.product-name")[0].text.strip()
+        quantity = product.select("div.product-unit-name")[0].text.strip()
+        price = product.select("span.price-discounted,span.price")[0].text.strip()
+                
+        item = {}
+        item["brand"] = brand
+        item["name"] = name
+        item["price"] = price[2:]
+        item["quantity"] = quantity
+            
+        items.append(item)
+    
+    return items
+    
+    
+def get_prices():
+    ihav = get_ihav_prices()
+    coh = get_coh_prices()
+    cl = get_cubanlous_prices()
+    fcc = get_finestcc_prices()
+    c1 = get_cigarone_prices()
+    tc = get_topcubans_prices()
+    return { "iHav": ihav, "CoH": coh, "CubanLous": cl, "FinestCC": fcc, "CigarOne": c1, "TopCubans": tc }

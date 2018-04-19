@@ -110,6 +110,55 @@ def get_finestcc(get_fresh = False):
         log_error('Error during requests to {0} : {1}'.format(url, str(e)))
         return None
 
+def get_cigarone(get_fresh = False):
+    filename = get_path_to_cache_file("cigarone")
+    if (os.path.exists(filename) and not get_fresh):
+        file = open(filename, encoding="utf-8")
+        return file.read()
+    
+    s = Session()
+    s.get("https://www.cigarone.com/")
+    timestamp = round(time.time() * 1000)
+    url = "https://www.cigarone.com/habanos-brands?cur=USD"
+    headers = { "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" }
+    try:
+        with closing(s.get(url, headers=headers, stream=True)) as resp:
+            if is_good_response(resp):
+                content = resp.text
+                file = open(filename, "w", encoding="utf-8")
+                file.write(content)
+                return content
+            else:
+                return None
+
+    except RequestException as e:
+        log_error('Error during requests to {0} : {1}'.format(url, str(e)))
+        return None
+    
+def get_topcubans(get_fresh = False):
+    filename = get_path_to_cache_file("topcubans")
+    if (os.path.exists(filename) and not get_fresh):
+        file = open(filename, encoding="utf-8")
+        return file.read()
+    
+    s = Session()
+    s.get("https://www.topcubans.com/?cur=USD")
+    url = "https://www.topcubans.com/search?q= "
+    headers = { "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Content-Type": "application/x-www-form-urlencoded" }
+    try:
+        with closing(s.post(url, headers=headers, stream=True)) as resp:
+            if is_good_response(resp):
+                content = resp.text
+                file = open(filename, "w", encoding="utf-8")
+                file.write(content)
+                return content
+            else:
+                return None
+
+    except RequestException as e:
+        log_error('Error during requests to {0} : {1}'.format(url, str(e)))
+        return None
+        
 def is_good_response(resp):
     """
     Returns true if the response seems to be HTML, false otherwise
