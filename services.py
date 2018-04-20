@@ -158,6 +158,32 @@ def get_topcubans(get_fresh = False):
     except RequestException as e:
         log_error('Error during requests to {0} : {1}'.format(url, str(e)))
         return None
+    
+def get_lcdhbelgium(get_fresh = False):
+    filename = get_path_to_cache_file("lcdhbelgium")
+    if (os.path.exists(filename) and not get_fresh):
+        file = open(filename, encoding="utf-8")
+        return file.read()
+    
+    s = Session()
+    s.get("https://lacasadelhabano-knokke.be")
+    url = "https://lacasadelhabano-knokke.be?virtuemart_currency_id=144&submit=Change+Currency"
+    headers = { "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Content-Type": "application/x-www-form-urlencoded" }
+    s.post(url, headers=headers)
+    url = ""
+    try:
+        with closing(s.post(url, headers=headers, stream=True)) as resp:
+            if is_good_response(resp):
+                content = resp.text
+                file = open(filename, "w", encoding="utf-8")
+                file.write(content)
+                return content
+            else:
+                return None
+
+    except RequestException as e:
+        log_error('Error during requests to {0} : {1}'.format(url, str(e)))
+        return None
         
 def is_good_response(resp):
     """
