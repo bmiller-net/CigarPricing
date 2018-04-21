@@ -182,6 +182,77 @@ def get_topcubans_prices():
     
     return items
     
+def get_yulcigars_prices():
+    price_page = services.get_yulcigars()
+    parsed = BeautifulSoup(price_page, "html.parser")
+    brand = ""
+    items = []
+    for row in parsed.select("table tr")[1:]:
+        if not row.text.strip():
+            continue
+            
+        columns = row.select("td")
+        style = ""
+        if "style" in row.attrs:
+            style = row["style"]
+        elif "style" in columns[0].attrs:
+            style = columns[0]["style"]
+        else:
+            continue
+            
+        if "height: 15.75pt;" in style:
+            brand = row.text.strip()
+            continue
+        
+        if "height: 15pt;" not in style:
+            continue
+        
+        name = columns[0].text.strip()
+        quantity = columns[5].text.strip()
+        
+        box_price = columns[4].text.replace(",", ".").strip()
+        single_price = columns[1].text.replace(",", ".").strip()
+        price1 = columns[2].text.replace(",", ".").strip()
+        price2 = columns[3].text.replace(",", ".").strip()
+        
+        # add single price
+        single = {}
+        single["brand"] = brand
+        single["name"] = name
+        single["price"] = single_price
+        single["quantity"] = "single"
+        items.append(single)
+        
+        quantities = quantity.split("/")
+        
+        current_quantity = 0
+        
+        if price2 != "0.00":
+            if price1 != "0.00":
+                size1 = {}
+                size1["brand"] = brand
+                size1["name"] = name
+                size1["price"] = price1
+                size1["quantity"] = "3" if current_quantity not in quantities else quantities[current_quantity].strip()
+                current_quantity += 1
+                items.append(size1)
+        
+            size2 = {}
+            size2["brand"] = brand
+            size2["name"] = name
+            size2["price"] = price2
+            size2["quantity"] = "10" if current_quantity not in quantities else quantities[current_quantity].strip()
+            items.append(size2)
+
+        item = {}
+        item["brand"] = brand
+        item["name"] = name
+        item["price"] = box_price
+        item["quantity"] = quantities[len(quantities)-1].strip()
+
+        items.append(item)
+    print("Cuba items: "+ str(len(items)))
+    return items
     
 def get_prices():
     ihav = get_ihav_prices()
@@ -190,4 +261,5 @@ def get_prices():
     fcc = get_finestcc_prices()
     c1 = get_cigarone_prices()
     tc = get_topcubans_prices()
-    return { "iHav": ihav, "CoH": coh, "CubanLous": cl, "FinestCC": fcc, "CigarOne": c1, "TopCubans": tc }
+    cuba = get_yulcigars_prices()
+    return { "iHav": ihav, "CoH": coh, "CubanLous": cl, "FinestCC": fcc, "CigarOne": c1, "TopCubans": tc, "Cuba": cuba }

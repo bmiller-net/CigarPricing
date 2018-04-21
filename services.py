@@ -184,6 +184,29 @@ def get_lcdhbelgium(get_fresh = False):
     except RequestException as e:
         log_error('Error during requests to {0} : {1}'.format(url, str(e)))
         return None
+
+def get_yulcigars(get_fresh = False):
+    filename = get_path_to_cache_file("yulcigars")
+    if (os.path.exists(filename) and not get_fresh):
+        file = open(filename, encoding="utf-8")
+        return file.read()
+    
+    s = Session()
+    headers = { "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" }
+    url = "http://yulcigars.blogspot.ca/"
+    try:
+        with closing(s.get(url, headers=headers, stream=True)) as resp:
+            if is_good_response(resp):
+                content = resp.text
+                file = open(filename, "w", encoding="utf-8")
+                file.write(content)
+                return content
+            else:
+                return None
+
+    except RequestException as e:
+        log_error('Error during requests to {0} : {1}'.format(url, str(e)))
+        return None
         
 def is_good_response(resp):
     """
@@ -193,7 +216,6 @@ def is_good_response(resp):
     return (resp.status_code == 200 
             and content_type is not None 
             and content_type.find('html') > -1)
-
 
 def log_error(e):
     """
