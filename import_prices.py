@@ -5,6 +5,7 @@ import re
 import configparser
 import os
 import unidecode
+import data_layer
 
 def get_unique():
     site_prices = page_parser.get_prices()
@@ -24,7 +25,6 @@ def get_unique():
     brands_to_include = list(map(lambda x: x.lower(), get_brands_to_include()))
     for source,prices in site_prices.items():
         items = process_site_items(prices, source)
-        print(source +" items: "+str(len(items)))
         for key,value in items.items():
             if key[0] not in brands_to_include:
                 continue
@@ -50,14 +50,44 @@ def get_unique():
         for source in list(site_prices.keys()):
             if source in uitem.keys():
                 uitems.write(idx, col, uitem[source].strip())
-            # else:
-                # print(source+ ": "+str(uitem))
             col += 1
         
         idx+=1
     filename = "App_Data/" + time.strftime("%Y%m%d-%H%M") + "_prices.xls"
     book.save(filename)
+
+def load_database():
+    site_prices = page_parser.get_prices()
+
+    inventory = []
     
+    joined_items = {}
+        
+    brands_to_include = list(map(lambda x: x.lower(), get_brands_to_include()))
+    for source,prices in site_prices.items():
+        items = process_site_items(prices, source)
+        for key,value in items.items():
+            if key[0] not in brands_to_include:
+                continue
+            if key not in joined_items:
+                joined_items[key] = { "brand": value[0], "name": value[1], "quantity": value[2] }
+            joined_items[key][source] = { "price": value[3], "is_in_stock": value[4] }
+    
+    records_to_load = []
+    for key,uitem in joined_items.items():
+        brand = uitem["brand"]
+        name = uitem["name"]
+        quantity = key[2]
+        
+        for source in list(site_prices.keys()):
+            if source in uitem.keys():
+                records_to_load.append([ brand, name, quantity, source, uitem[source]["price"], uitem[source]["is_in_stock"] ] )
+    
+    print("items: "+str(len(joined_items)))
+    
+    number_of_records = data_layer.insert_prices(records_to_load)
+    print(str(number_of_records) + " records loaded")
+                
 def return_unique_inventory(items, inventory = []):
     for item in items:
         uniform_item = get_uniform_item_tuple(item["brand"], item["name"], item["quantity"])
@@ -76,7 +106,7 @@ def return_unique_inventory(items, inventory = []):
     
     return inventory
     
-def get_display_tuple(brand, name, quantity, price):
+def get_display_tuple(brand, name, quantity, price, is_in_stock):
     brand = fix_brand(brand)
     name = fix_name(name)
     quantity = fix_quantity(quantity)
@@ -86,11 +116,23 @@ def get_display_tuple(brand, name, quantity, price):
         name = name.replace("Robustos ", "Robusto ")
         name = name.replace("Priamides ", "Piramides ")
         name = name.replace("Pirmides ", "Piramides ")
+        name = name.replace("Coronas Especiales", "Corona Especiales")
         name = re.sub('siglo', 'Siglo', name, flags=re.IGNORECASE)
         name = re.sub('[ ]bhk[ ]', ' ', name, flags=re.IGNORECASE)
+        if name.startswith("Genios"):
+            name = "Maduro 5 Genios"
+        if name.startswith("Magicos"):
+            name = "Maduro 5 Magicos"
+        if name.startswith("Secretos"):
+            name = "Maduro 5 Secretos"
+        if name.endswith("Robusto"):
+            name = name + "s"
+        name = name.replace("Gran Reserva", "Grand Reserva")
+        name = re.sub("Siglo (?P<numeral>([IVX]){1,3})", lambda match: r'Siglo {}'.format(match.group(1).upper()), name, flags=re.IGNORECASE)
     
     if brand.lower() == 'cuaba':
         name = name.replace("Diademas", "Diadema")
+        name = name.replace("Salomones", "Salomon")
     
     if name.lower().endswith(" - lcdh"):
         name = name[:len(name)-7]
@@ -98,24 +140,49 @@ def get_display_tuple(brand, name, quantity, price):
     if name.lower().endswith("lcdh"):
         name = name[:len(name)-4]
     
+    if brand.lower() == "el rey del mundo":
+        name = name.replace("Demi Tasse", "Demi-Tasse")
+        if name.startswith("Rey Del Mundo"):
+            name = name[14:]
+    
+    if brand.lower() == "fonseca":
+        name = name.replace("CADETES", "Cadetes")
+    
     if brand.lower() == 'hoyo de monterrey':
         if name.lower().startswith('hoyo '):
             name = name[5:]
         if name.lower().endswith("robusto"):
             name = name.replace("Petit Robusto", "Petit Robustos")
+        if name.startswith("du"):
+            name = name.replace("du ", "Du ")
+        if name.startswith("des"):
+            name = name.replace("des", "Des")
+        name = name.replace("Epicure Especiales", "Epicure Especial")
     
     if brand.lower() == 'h. upmann':
         name = name.replace("Connossieur", "Connoisseur")
         name = name.replace("Half Coronas", "Half Corona")
         name = name.replace("Royal Robustos", "Royal Robusto")
+        if name.startswith("Upmann "):
+            name = name[7:]
+        if name.endswith("Epicure"):
+            name = name + "s"
+        name = name.replace("Majestics", "Majestic")
+    
+    if brand.lower() == 'la gloria cubana':
+        name = re.sub(' [d][ \'\`]or ', ' d\'or ', name, flags=re.IGNORECASE)
+        name = re.sub('th aniversdario', 'Aniversario', name, flags=re.IGNORECASE)
     
     if brand.lower() == 'montecristo':
         name = name.replace("Churchill Anejados", "Churchills Anejados")
         name = name.replace("Edmundos", "Edmundo")
+        name = name.replace("Especiales No", "Especial No")
+        name = re.sub("anniversario", "Aniversario", name, flags=re.IGNORECASE)
     
     if brand.lower() == 'partagas':
         if name.endswith("Short"):
             name = name.replace("Short", "Shorts")
+        name = name.replace("Millefleurs", "Mille Fleurs")
 
     if brand.lower() == 'punch':
         name = re.sub('(Punch)?[ ]?[-]?[ ]?(Punch)', 'Punch', name)
@@ -132,12 +199,15 @@ def get_display_tuple(brand, name, quantity, price):
         name = name.replace("Exhibition", "Exhibicion")
         name = name.replace("Coronitas en Cedros", "Coronitas en Cedro")
         if name.endswith("Petit Julieta"):
-            name += "s"
+            name = name + "s"
 
     if brand.lower() == 'la gloria cubana':
         name = name.replace("Medaille D Or No.4", "Medaille D`or No.4")
             
-    return (brand.strip(), name.strip(), quantity.strip(), price.strip())
+    if brand.lower() == 'saint luis rey':
+        name = name.replace("Inca ", "Incas")
+
+    return (brand, name, quantity, price, is_in_stock)
 
 def fix_brand(input_string):
     brands_from_settings = get_brands_to_include()
@@ -146,7 +216,6 @@ def fix_brand(input_string):
     fixed_brand = re.sub("Quai [D]?[']?Orsay", "Quai D'Orsay", fixed_brand, flags=re.IGNORECASE)
     fixed_brand = re.sub("Jose Piedra", "Jose L. Piedra", fixed_brand, flags=re.IGNORECASE)
     fixed_brand = re.sub("San Cristobal", "San Cristobal De La Habana", fixed_brand, flags=re.IGNORECASE)
-    print (fixed_brand)
     for brand in brands_from_settings:
         if fixed_brand.lower() == brand.lower():        
             return brand
@@ -154,11 +223,12 @@ def fix_brand(input_string):
 
 def fix_name(input_string):
     output_string = re.sub('[ ][A][\/]?[T]', ' Tubos', unidecode.unidecode(input_string), flags=re.IGNORECASE)
-    output_string = re.sub('No([ ]?)(?P<number>[0-9]+)', 'No.\g<number>', output_string)
+    output_string = re.sub('N[o]?([ ]?)(?P<number>[0-9]+)', 'No.\g<number>', output_string)
     output_string = re.sub('[.][ ]', '.', output_string)
-    output_string = re.sub('([\(][d][\d]{4}[\)])?([ ](lcdh)?(hse)?(el)?[ ][\d]{4})?([*])?', '', output_string, flags=re.IGNORECASE)
-    output_string = re.sub('((slb)?)((cab)?)(jar[ ])?([(]hand rolled[)])?(([ ]box[ ]of[ ][\d]+)?)( [\d]{0-2})?', '', output_string, flags=re.IGNORECASE)
+    output_string = re.sub('([\(][d][ ]?[\d]{4}[\)])?([ ](lcdh)?(hse)?(el)?[ ][\d]{4})?([*])?', '', output_string, flags=re.IGNORECASE)
+    output_string = re.sub('((slb)?)((cab(inet)?)?)(jar[ ])?([(]hand rolled[)])?(([ ]box[ ])?(of[ ])?)([ ][\d]{2,4})?', '', output_string, flags=re.IGNORECASE)
     output_string = re.sub(' de ', ' de ', output_string, flags=re.IGNORECASE)
+    output_string = re.sub(' du ', ' du ', output_string, flags=re.IGNORECASE)
     output_string = re.sub(' en ', ' en ', output_string, flags=re.IGNORECASE)
     output_string = output_string.replace("Edicion Limitada", "Limited Edition")
     if output_string.lower().endswith('tubo'):
@@ -167,7 +237,9 @@ def fix_name(input_string):
     return output_string.strip()
     
 def fix_quantity(input_string):
-    return re.sub('((slb)?)((Box)?)((Set)?)((Humidor)?)([\(]?Cab(inet)?[\)]?)?((Pack)?)((Cube)?)((Jar)?)([ ]of[ ])?', '', input_string, flags=re.IGNORECASE).strip()
+    output_string = re.sub('((slb)?)((Box)?)((Set)?)((Humidor)?)([\(]?Cab(inet)?[\)]?)?((Pack)?)((Cube)?)((Jar)?)([ ]of[ ])?', '', input_string, flags=re.IGNORECASE).strip()
+    output_string = re.sub('(?P<quantity>[\d])x(?P<boxes>[\d])', '\g<quantity> x \g<boxes>', output_string, flags=re.IGNORECASE)
+    return output_string
 
 def fix_price(input_string):
     return re.sub('([$,`\']?)', '', input_string).strip()
@@ -194,13 +266,12 @@ def get_brands_to_include():
 def process_site_items(items, source):
     uniform_items = {}
     for item in items:
-        display_tuple = get_display_tuple(item["brand"], item["name"], item["quantity"], item["price"])
-        #if display_tuple[0].lower() == 'cohiba':
-            #print (display_tuple)
+        display_tuple = get_display_tuple(item["brand"], item["name"], item["quantity"], item["price"], item["is_in_stock"])
+        if any(map(lambda x: x is None, list(display_tuple))):
+            continue
         uniform_item = (display_tuple[0].lower(), display_tuple[1].lower(), display_tuple[2].lower())
         uniform_items[uniform_item] = display_tuple
-        # if source == "Cuba":
-            # print (uniform_item)
+
     return uniform_items
     
-get_unique()
+#get_unique()

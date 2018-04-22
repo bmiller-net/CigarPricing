@@ -20,6 +20,7 @@ def get_coh_prices():
             item["name"] = cells[1].text.strip()
             item["quantity"] = cells[2].text.strip()
             item["price"] = cells[4].text.strip()[2:]
+            item["is_in_stock"] = True
             items.append(item)
     
     return items
@@ -47,6 +48,7 @@ def get_ihav_prices():
         item["name"] = name
         item["quantity"] = quantity
         item["price"] = price
+        item["is_in_stock"] = True
         items.append(item)
     
     return items
@@ -92,6 +94,7 @@ def get_cubanlous_prices():
         item["name"] = name.strip().title()
         item["quantity"] = quantity
         item["price"] = price
+        item["is_in_stock"] = row.select(".button-container")[0].text.strip().lower() == "out of stock"
         items.append(item)
     
     return items
@@ -118,6 +121,7 @@ def get_finestcc_prices():
                 item["name"] = name.strip()
                 item["price"] = option.select(".original,.special")[0].text.strip()[3:]
                 item["quantity"] = option.select(".sticks")[0].text.strip()
+                item["is_in_stock"] = len(option.select(".out_of_stock")) == 0
                 items.append(item)
                 
     return items
@@ -148,11 +152,14 @@ def get_cigarone_prices():
             else:
                 price = price_column.text.strip()
             
+            is_in_stock = columns[3].text.strip().lower() == "out of stock"
+            
             item = {}
             item["brand"] = brand
             item["name"] = name
             item["price"] = price[2:]
             item["quantity"] = quantity
+            item["is_in_stock"] = is_in_stock
             
             # print(item["brand"]+"|"+item["name"]+"|"+item["price"]+"|"+item["quantity"])
             
@@ -171,12 +178,17 @@ def get_topcubans_prices():
         name = product.select("div.product-name")[0].text.strip()
         quantity = product.select("div.product-unit-name")[0].text.strip()
         price = product.select("span.price-discounted,span.price")[0].text.strip()
-                
+        
+        article = product.select("article")[0]
+        is_in_stock = "is-out-of-stock" not in article.attrs["class"]
+        
+        
         item = {}
         item["brand"] = brand
         item["name"] = name
         item["price"] = price[2:]
         item["quantity"] = quantity
+        item["is_in_stock"] = is_in_stock
             
         items.append(item)
     
@@ -215,12 +227,16 @@ def get_yulcigars_prices():
         price1 = columns[2].text.replace(",", ".").strip()
         price2 = columns[3].text.replace(",", ".").strip()
         
+        if all(map(lambda x: x == "0.00", [box_price, single_price, price1, price2])):
+            continue
+        
         # add single price
         single = {}
         single["brand"] = brand
         single["name"] = name
         single["price"] = single_price
         single["quantity"] = "single"
+        single["is_in_stock"] = True
         items.append(single)
         
         quantities = quantity.split("/")
@@ -234,6 +250,7 @@ def get_yulcigars_prices():
                 size1["name"] = name
                 size1["price"] = price1
                 size1["quantity"] = "3" if current_quantity not in quantities else quantities[current_quantity].strip()
+                size1["is_in_stock"] = True
                 current_quantity += 1
                 items.append(size1)
         
@@ -242,6 +259,7 @@ def get_yulcigars_prices():
             size2["name"] = name
             size2["price"] = price2
             size2["quantity"] = "10" if current_quantity not in quantities else quantities[current_quantity].strip()
+            size2["is_in_stock"] = True
             items.append(size2)
 
         item = {}
@@ -249,9 +267,9 @@ def get_yulcigars_prices():
         item["name"] = name
         item["price"] = box_price
         item["quantity"] = quantities[len(quantities)-1].strip()
+        item["is_in_stock"] = True
 
         items.append(item)
-    print("Cuba items: "+ str(len(items)))
     return items
     
 def get_prices():
