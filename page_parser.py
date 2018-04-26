@@ -273,11 +273,48 @@ def get_yulcigars_prices():
     return items
     
 def get_prices():
-    ihav = get_ihav_prices()
-    coh = get_coh_prices()
-    cl = get_cubanlous_prices()
-    fcc = get_finestcc_prices()
-    c1 = get_cigarone_prices()
-    tc = get_topcubans_prices()
-    cuba = get_yulcigars_prices()
-    return { "iHav": ihav, "CoH": coh, "CubanLous": cl, "FinestCC": fcc, "CigarOne": c1, "TopCubans": tc, "Cuba": cuba }
+    prices = {}
+    
+    try:
+        ihav = get_ihav_prices()
+        prices["iHav"] = ihav
+    except:
+        pass
+        
+    try:
+        coh = get_coh_prices()
+        prices["CoH"] = coh
+    except:
+        pass
+        
+    try:
+        cl = get_cubanlous_prices()
+        prices["CubanLous"] = cl
+    except:
+        pass
+        
+    try:
+        fcc = get_finestcc_prices()
+        prices["FinestCC"] = fcc
+    except:
+        pass
+        
+    try:
+        c1 = get_cigarone_prices()
+        prices["CigarOne"] = c1
+    except:
+        pass
+        
+    try:
+        tc = get_topcubans_prices()
+        prices["TopCubans"] = tc
+    except:
+        pass
+        
+    try:        
+        cuba = get_yulcigars_prices()
+        prices["Cuba"] = cuba
+    except:
+        pass
+        
+    return prices
